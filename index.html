@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Next SEPTA Bus</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚌</text></svg>">
     <style>
         * {
             margin: 0;
@@ -717,7 +718,7 @@
             
             routeInput.focus();
         }
-
+        
         function hideSetup() {
             document.getElementById('setupModal').style.display = 'none';
         }
@@ -814,6 +815,9 @@
                 currentDirection = route.direction;
                 currentStop = route.stop;
                 
+                // Update timestamp for this route to move it to top
+                updateRouteTimestamp(route.route, route.direction, route.stop);
+                
                 // Update URL
                 const url = new URL(window.location);
                 url.searchParams.set('route', route.route);
@@ -823,6 +827,24 @@
                 
                 hideHistory();
                 loadStopsAndStart();
+            }
+        }
+
+        function updateRouteTimestamp(route, direction, stop) {
+            let history = getRouteHistory();
+            
+            // Find and update the timestamp for this specific route
+            const routeIndex = history.findIndex(h => 
+                h.route === route && h.direction === direction && h.stop === stop
+            );
+            
+            if (routeIndex !== -1) {
+                // Update timestamp and move to front
+                history[routeIndex].timestamp = Date.now();
+                const updatedRoute = history.splice(routeIndex, 1)[0];
+                history.unshift(updatedRoute);
+                
+                localStorage.setItem('septaBusHistory', JSON.stringify(history));
             }
         }
 
@@ -1050,27 +1072,78 @@
                 return [];
             }
         }
+        // async function fetchStopsData(route) {
+        //     // Try live SEPTA API via CORS proxy
+        //     const septaStopsUrl = `https://www3.septa.org/api/Stops/index.php?req1=${route}`;
+        //     const cacheBuster = Date.now();
+        //     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaStopsUrl)}&_cb=${cacheBuster}`;
+        //     const stopsResponse = await fetch(proxyUrl);
+            
+        //     if (!stopsResponse.ok) {
+        //         throw new Error(`Proxy request failed: ${stopsResponse.status}`);
+        //     }
+            
+        //     const proxyData = await stopsResponse.json();
+        //     const septaData = JSON.parse(proxyData.contents);
+            
+        //     // SEPTA stops API returns an array directly
+        //     if (!Array.isArray(septaData) || septaData.length === 0) {
+        //         throw new Error('No stops data available from SEPTA API');
+        //     }
+            
+        //     console.log('Loaded stops from live SEPTA API');
+        //     return septaData;
+        // }
+
         async function fetchStopsData(route) {
-            // Try live SEPTA API via CORS proxy
             const septaStopsUrl = `https://www3.septa.org/api/Stops/index.php?req1=${route}`;
-            const cacheBuster = Date.now();
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaStopsUrl)}&_cb=${cacheBuster}`;
-            const stopsResponse = await fetch(proxyUrl);
             
-            if (!stopsResponse.ok) {
-                throw new Error(`Proxy request failed: ${stopsResponse.status}`);
+            try {
+                // First try: Direct API call
+                console.log('Attempting direct SEPTA API call...');
+                const directResponse = await fetch(septaStopsUrl);
+                
+                if (directResponse.ok) {
+                    const directData = await directResponse.json();
+                    
+                    // SEPTA stops API returns an array directly
+                    if (Array.isArray(directData) && directData.length > 0) {
+                        console.log('Success: Loaded stops from direct SEPTA API');
+                        return directData;
+                    }
+                }
+                
+                throw new Error('Direct API call failed or returned invalid data');
+                
+            } catch (directError) {
+                console.log('Direct API failed, falling back to proxy:', directError.message);
+                
+                try {
+                    // Fallback: Use CORS proxy
+                    const cacheBuster = Date.now();
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaStopsUrl)}&_cb=${cacheBuster}`;
+                    const proxyResponse = await fetch(proxyUrl);
+                    
+                    if (!proxyResponse.ok) {
+                        throw new Error(`Proxy request failed: ${proxyResponse.status}`);
+                    }
+                    
+                    const proxyData = await proxyResponse.json();
+                    const septaData = JSON.parse(proxyData.contents);
+                    
+                    // SEPTA stops API returns an array directly
+                    if (!Array.isArray(septaData) || septaData.length === 0) {
+                        throw new Error('No stops data available from SEPTA API via proxy');
+                    }
+                    
+                    console.log('Success: Loaded stops from SEPTA API via proxy');
+                    return septaData;
+                    
+                } catch (proxyError) {
+                    console.error('Both direct and proxy attempts failed:', proxyError);
+                    throw new Error('Unable to fetch stops data from SEPTA API');
+                }
             }
-            
-            const proxyData = await stopsResponse.json();
-            const septaData = JSON.parse(proxyData.contents);
-            
-            // SEPTA stops API returns an array directly
-            if (!Array.isArray(septaData) || septaData.length === 0) {
-                throw new Error('No stops data available from SEPTA API');
-            }
-            
-            console.log('Loaded stops from live SEPTA API');
-            return septaData;
         }
 
         // Load stops data and start tracking
@@ -1080,6 +1153,11 @@
                 
                 // Remove no-route class
                 document.getElementById('mainContent').classList.remove('no-route');
+                
+                // Update timestamp when route is loaded (if it exists in history)
+                if (currentRoute && currentDirection && currentStop) {
+                    updateRouteTimestamp(currentRoute, currentDirection, currentStop);
+                }
                 
                 // Load stops data using the reusable function
                 stopsData = await fetchStopsData(currentRoute);
@@ -1124,10 +1202,18 @@
             loadStopsAndStart();
         }
 
-        // Load stops for route selection
-        document.getElementById('routeInput').addEventListener('input', async function() {
+        // Load stops for route selection - on blur
+        document.getElementById('routeInput').addEventListener('blur', async function() {
             const route = this.value.trim();
             await loadRouteDataForModal(route);
+        });
+
+        // Load stops for route selection - on 'enter'
+        document.getElementById('routeInput').addEventListener('keydown', async function(event) {
+            if (event.key === 'Enter') {
+                const route = this.value.trim();
+                await loadRouteDataForModal(route);
+            }
         });
 
         // Populate direction selection based on actual bus data
