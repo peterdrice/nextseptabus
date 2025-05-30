@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next SEPTA Bus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .route-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            position: relative;
+        }
+
+        .route-info h2 {
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+            padding-right: 120px; /* Space for buttons */
+            word-wrap: break-word;
+            line-height: 1.3;
+        }
+
+        .route-info p {
+            color: #666;
+            font-size: 0.9rem;
+            padding-right: 120px; /* Space for buttons */
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .detours-warning {
+            margin-top: 8px;
+            color: #d68910;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.3s ease;
+        }
+
+        .detours-warning:hover {
+            color: #b7950b;
+        }
+
+        .route-actions {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+        }
+
+        .action-button {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            min-width: 42px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            height: 48px;
+        }
+
+        .action-button svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .action-button:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .action-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .refresh-countdown {
+            font-size: 0.65rem;
+            line-height: 1.2;
+            opacity: 0.8;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
+        .bus-list {
+            padding: 20px;
+        }
+
+        .bus-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            margin-bottom: 12px;
+            background: white;
+            border: 2px solid #f1f3f4;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            gap: 15px;
+        }
+
+        .bus-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .bus-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bus-number {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .bus-details {
+            color: #666;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .destination-line {
+            margin-bottom: 2px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .next-stop-line {
+            margin-bottom: 2px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .arrival-container {
+            text-align: right;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .arrival-time {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #28a745;
+            margin-bottom: 4px;
+        }
+
+        .arrival-time.late {
+            color: #dc3545;
+        }
+
+        .distance {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .occupancy {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .occupancy.empty { background: #d4edda; color: #155724; }
+        .occupancy.few { background: #fff3cd; color: #856404; }
+        .occupancy.many { background: #cce5ff; color: #004085; }
+        .occupancy.full { background: #f8d7da; color: #721c24; }
+        .occupancy.standing { background: #d1ecf1; color: #0c5460; }
+        .occupancy.crushed { background: #f5c6cb; color: #721c24; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 10px;
+            margin: 20px;
+        }
+
+        .refresh-info {
+            text-align: center;
+            padding: 15px 20px;
+            color: #999;
+            font-size: 0.8rem;
+            border-top: 1px solid #f1f3f4;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .more-info-link {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+
+        .more-info-link:hover {
+            color: #5a6fd8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        /* Detours modal specific styles */
+        .detour-item {
+            background: #fff8e1;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        .detour-header {
+            font-weight: 600;
+            color: #e67e22;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detour-direction {
+            background: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .detour-reason {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .detour-dates {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .detour-location {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .detour-message {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #333;
+            border: 1px solid #f39c12;
+        }
+
+        /* Route history modal specific styles */
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .history-item:hover {
+            background: #e9ecef;
+        }
+
+        .history-details {
+            flex: 1;
+        }
+
+        .history-route {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 2px;
+        }
+
+        .history-stop {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .history-delete {
+            color: #dc3545;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .history-delete:hover {
+            background: #f8d7da;
+        }
+
+        .no-history {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .faq-content {
+            line-height: 1.6;
+        }
+
+        .faq-content h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .faq-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .faq-content li {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .faq-content li:before {
+            content: "•";
+            color: #667eea;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        .no-route .bus-list {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            position: relative;
+        }
+
+        .no-route .setup-button-center {
+            background: #667eea;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .no-route .setup-button-center:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                min-height: 100vh;
+            }
+            
+            .route-actions {
+                top: 10px;
+                right: 10px;
+                gap: 6px;
+            }
+            
+            .action-button {
+                padding: 5px 8px;
+                min-width: 38px;
+                height: 42px;
+            }
+            
+            .action-button svg {
+                width: 15px;
+                height: 15px;
+            }
+            
+            .refresh-countdown {
+                font-size: 0.6rem;
+                margin-top: 1px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content" id="mainContent">
+            <div id="routeInfo" class="route-info" style="display: none;">
+                <h2 id="routeTitle">Route Information</h2>
+                <p id="routeDetails">Select a route to get started</p>
+                <div id="detoursWarning" class="detours-warning" style="display: none;" onclick="showDetours()">
+                    ⚠️ <span>Detours!</span>
+                </div>
+                <div class="route-actions">
+                    <button class="action-button" id="refreshButton" onclick="manualRefresh()" title="Refresh">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                        </svg>
+                        <div class="refresh-countdown" id="refreshCountdown"></div>
+                    </button>
+                    <button class="action-button" onclick="showHistory()" title="Route History">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14,2 14,8 20,8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10,9 9,9 8,9"></polyline>
+                        </svg>
+                    </button>
+                    <button class="action-button" onclick="showSetup()" title="Change Route">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bus-list" id="busContent">
+                <button class="setup-button-center" onclick="showSetup()">🚌 Select Your Route</button>
+            </div>
+
+            <div class="refresh-info" id="refreshInfo" style="display: none;">
+                Updates every 30 seconds • Last updated: <span id="lastUpdate">Never</span><span class="more-info-link" onclick="showInfo()">More info</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Modal -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideSetup()">&times;</span>
+            <h2>Select Your Route</h2>
+            
+            <div class="form-group">
+                <label for="routeInput">Bus Route Number:</label>
+                <input type="text" id="routeInput" placeholder="e.g., 47">
+            </div>
+
+            <div class="form-group">
+                <label for="directionSelect">Direction:</label>
+                <select id="directionSelect">
+                    <option value="">Select Direction</option>
+                    <option value="Northbound">Northbound</option>
+                    <option value="Southbound">Southbound</option>
+                    <option value="Eastbound">Eastbound</option>
+                    <option value="Westbound">Westbound</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="stopSelect">Your Stop:</label>
+                <select id="stopSelect">
+                    <option value="">First select a route and direction</option>
+                </select>
+            </div>
+
+            <button class="btn" onclick="applySettings()">Track Buses</button>
+        </div>
+    </div>
+
+    <!-- Route History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideHistory()">&times;</span>
+            <h2 style="margin-bottom: 20px;">📋 Route History</h2>
+            <div id="historyContent">
+                <div class="loading">Loading history...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info/FAQ Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideInfo()">&times;</span>
+            <div class="faq-content">
+                <h2>About SEPTA Bus Tracker</h2>
+                <h3>How it works:</h3>
+                <ul>
+                    <li>Real-time bus locations are fetched from SEPTA's live TransitView API every 30 seconds</li>
+                    <li>Only buses approaching your selected stop in the correct direction are shown</li>
+                    <li>Arrival times are estimated based on distance and an average city bus speed of 10mph</li>
+                </ul>
+                
+                <h3>Features:</h3>
+                <ul>
+                    <li>Bus occupancy indicators (seats available, standing room, etc.)</li>
+                    <li>Active detour notifications with detailed routing information</li>
+                    <li>Color coding for arrival times indicating whether bus is on schedule (within 3min) or not</li>
+                    <li>Manual refresh option for immediate updates</li>
+                </ul>
+                
+                <h3>Tips:</h3>
+                <ul>
+                    <li>Distance is measured as straight-line distance from the bus location to your selected stop, not factoring in route</li>
+                    <li>Straight line travel assumptions may cause inaccurate time estimates for atypical routes</li>
+                    <li>If no buses appear, they may not be running or you may have selected a stop near the start of the line so no busses are en route</li>
+                </ul>
+
+                
+                <h3>FAQ:</h3>
+                <ul>
+                    <li>This app collects no data from you whatsoever</li>
+                    <li>Saved routes are stored securely on your device, so you'll lose them if you clear your storage/cache</li>
+                    <li>The app was made for a specific individual purpose of wanting an extremely fast way to see if buses were approaching a specific stop, so no additional features are planned</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div id="detoursModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideDetours()">&times;</span>
+            <h2>🚧 Route Detours</h2>
+            <div id="detoursContent">
+                <div class="loading">Loading detours...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentRoute = null;
+        let currentDirection = null;
+        let currentStop = null;
+        let stopsData = [];
+        let busData = null;
+        let detoursData = null;
+        let routeBusData = null; // Store route bus data for direction filtering
+        let refreshInterval = null;
+        let countdownInterval = null;
+        let lastUpdateTime = 0;
+        let nextRefreshTime = 0;
+
+        // Initialize app
+        function init() {
+            // Check URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const route = urlParams.get('route');
+            const direction = urlParams.get('direction');
+            const stop = urlParams.get('stop');
+
+            if (route && direction && stop) {
+                currentRoute = route;
+                currentDirection = direction;
+                currentStop = stop;
+                loadStopsAndStart();
+            } else {
+                // Show initial state
+                document.getElementById('mainContent').classList.add('no-route');
+            }
+        }
+
+        // Setup modal functions
+        function showSetup() {
+            const modal = document.getElementById('setupModal');
+            modal.style.display = 'block';
+            
+            // Initialize modal with current values if they exist
+            const routeInput = document.getElementById('routeInput');
+            const directionSelect = document.getElementById('directionSelect');
+            const stopSelect = document.getElementById('stopSelect');
+            
+            // Set current values or clear
+            routeInput.value = currentRoute || '';
+            directionSelect.innerHTML = '<option value="">Select Direction</option>';
+            stopSelect.innerHTML = '<option value="">First select a route and direction</option>';
+            
+            // If there's a current route, try to load its data
+            if (currentRoute) {
+                loadRouteDataForModal(currentRoute);
+            }
+            
+            routeInput.focus();
+        }
+
+        function hideSetup() {
+            document.getElementById('setupModal').style.display = 'none';
+        }
+
+        // Route history functions
+        function showHistory() {
+            document.getElementById('historyModal').style.display = 'block';
+            displayRouteHistory();
+        }
+
+        function hideHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        function saveRouteToHistory() {
+            if (!currentRoute || !currentDirection || !currentStop) return;
+            
+            const route = {
+                route: currentRoute,
+                direction: currentDirection,
+                stop: currentStop,
+                stopName: getStopName(currentStop),
+                timestamp: Date.now()
+            };
+            
+            let history = getRouteHistory();
+            
+            // Remove duplicate if it exists
+            history = history.filter(h => 
+                !(h.route === route.route && h.direction === route.direction && h.stop === route.stop)
+            );
+            
+            // Add to beginning
+            history.unshift(route);
+            
+            // Keep only last 10
+            history = history.slice(0, 10);
+            
+            localStorage.setItem('septaBusHistory', JSON.stringify(history));
+        }
+
+        function getRouteHistory() {
+            try {
+                const history = localStorage.getItem('septaBusHistory');
+                return history ? JSON.parse(history) : [];
+            } catch (error) {
+                console.error('Error reading route history:', error);
+                return [];
+            }
+        }
+
+        function getStopName(stopId) {
+            if (stopsData && stopsData.length > 0) {
+                const stop = stopsData.find(s => s.stopid === stopId);
+                return stop ? stop.stopname : stopId;
+            }
+            return stopId;
+        }
+
+        function displayRouteHistory() {
+            const historyContent = document.getElementById('historyContent');
+            const history = getRouteHistory();
+            
+            if (history.length === 0) {
+                historyContent.innerHTML = '<div class="no-history">No recent routes found.<br>Track a route to build your history!</div>';
+                return;
+            }
+            
+            let html = '';
+            history.forEach((route, index) => {
+                html += `
+                    <div class="history-item" onclick="selectHistoryRoute(${index})">
+                        <div class="history-details">
+                            <div class="history-route">Route ${route.route} ${route.direction}</div>
+                            <div class="history-stop">${route.stopName}</div>
+                        </div>
+                        <div class="history-delete" onclick="deleteHistoryRoute(${index}, event)" title="Delete">
+                            🗑️
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyContent.innerHTML = html;
+        }
+
+        function selectHistoryRoute(index) {
+            const history = getRouteHistory();
+            if (index >= 0 && index < history.length) {
+                const route = history[index];
+                
+                // Set current values
+                currentRoute = route.route;
+                currentDirection = route.direction;
+                currentStop = route.stop;
+                
+                // Update URL
+                const url = new URL(window.location);
+                url.searchParams.set('route', route.route);
+                url.searchParams.set('direction', route.direction);
+                url.searchParams.set('stop', route.stop);
+                window.history.pushState({}, '', url);
+                
+                hideHistory();
+                loadStopsAndStart();
+            }
+        }
+
+        function deleteHistoryRoute(index, event) {
+            event.stopPropagation(); // Prevent route selection
+            
+            let history = getRouteHistory();
+            history.splice(index, 1);
+            localStorage.setItem('septaBusHistory', JSON.stringify(history));
+            
+            displayRouteHistory(); // Refresh the display
+        }
+        function showInfo() {
+            document.getElementById('infoModal').style.display = 'block';
+        }
+
+        function hideInfo() {
+            document.getElementById('infoModal').style.display = 'none';
+        }
+        function showDetours() {
+            document.getElementById('detoursModal').style.display = 'block';
+            displayDetours();
+        }
+
+        function hideDetours() {
+            document.getElementById('detoursModal').style.display = 'none';
+        }
+
+        // Fetch detours data
+        async function fetchDetoursData(route) {
+            try {
+                const septaDetoursUrl = `https://www3.septa.org/api/BusDetours/index.php?route=${route}`;
+                const cacheBuster = Date.now();
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaDetoursUrl)}&_cb=${cacheBuster}`;
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy request failed: ${response.status}`);
+                }
+                
+                const proxyData = await response.json();
+                const data = JSON.parse(proxyData.contents);
+                
+                console.log('Detours data:', data);
+                return data;
+            } catch (error) {
+                console.error('Failed to fetch detours:', error);
+                return null;
+            }
+        }
+
+        // Display detours in modal
+        function displayDetours() {
+            const detoursContent = document.getElementById('detoursContent');
+            
+            if (!detoursData || detoursData.length === 0) {
+                detoursContent.innerHTML = '<div class="loading">No detour information available</div>';
+                return;
+            }
+
+            let html = '';
+            detoursData.forEach(routeDetour => {
+                if (routeDetour.route_info && routeDetour.route_info.length > 0) {
+                    routeDetour.route_info.forEach(detour => {
+                        html += `
+                            <div class="detour-item">
+                                <div class="detour-header">
+                                    <span class="detour-direction">${detour.route_direction}</span>
+                                    <span class="detour-reason">${detour.reason}</span>
+                                </div>
+                                ${detour.start_location ? `<div class="detour-location"><strong>From:</strong> ${detour.start_location}</div>` : ''}
+                                ${detour.end_location ? `<div class="detour-location"><strong>To:</strong> ${detour.end_location}</div>` : ''}
+                                <div class="detour-dates">
+                                    <strong>Duration:</strong> ${detour.start_date_time} - ${detour.end_date_time}
+                                </div>
+                                ${detour.current_message ? `<div class="detour-message">${detour.current_message}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+            });
+
+            if (html === '') {
+                detoursContent.innerHTML = '<div class="loading">No active detours found</div>';
+            } else {
+                detoursContent.innerHTML = html;
+            }
+        }
+
+        // Update detours warning display
+        function updateDetoursWarning() {
+            const detoursWarning = document.getElementById('detoursWarning');
+            
+            if (detoursData && detoursData.length > 0) {
+                // Check if there are any actual detours
+                const hasDetours = detoursData.some(routeDetour => 
+                    routeDetour.route_info && routeDetour.route_info.length > 0
+                );
+                
+                if (hasDetours) {
+                    detoursWarning.style.display = 'flex';
+                } else {
+                    detoursWarning.style.display = 'none';
+                }
+            } else {
+                detoursWarning.style.display = 'none';
+            }
+        }
+
+        // Load route data for modal (directions and stops)
+        async function loadRouteDataForModal(route) {
+            if (!route || route.trim() === '') {
+                resetModalSelects();
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const directionSelect = document.getElementById('directionSelect');
+                const stopSelect = document.getElementById('stopSelect');
+                directionSelect.innerHTML = '<option value="">Loading directions...</option>';
+                stopSelect.innerHTML = '<option value="">Loading stops...</option>';
+                
+                // Fetch both stops and bus data
+                const [stops, buses] = await Promise.all([
+                    fetchStopsData(route),
+                    fetchRouteBusData(route)
+                ]);
+                
+                // Store data for later use
+                stopsData = stops;
+                routeBusData = buses;
+                
+                // Populate directions
+                populateDirectionSelect(buses);
+                
+                // If we have a current direction, set it and load stops
+                if (currentDirection) {
+                    const directionSelect = document.getElementById('directionSelect');
+                    if ([...directionSelect.options].some(option => option.value === currentDirection)) {
+                        directionSelect.value = currentDirection;
+                        populateStopSelect(stops);
+                        
+                        // If we have a current stop, set it
+                        if (currentStop) {
+                            const stopSelect = document.getElementById('stopSelect');
+                            if ([...stopSelect.options].some(option => option.value === currentStop)) {
+                                stopSelect.value = currentStop;
+                            }
+                        }
+                    }
+                } else {
+                    // Reset stops since no direction is selected
+                    stopSelect.innerHTML = '<option value="">Select a direction first</option>';
+                }
+                
+            } catch (error) {
+                console.error('Failed to load route data for modal:', error);
+                const directionSelect = document.getElementById('directionSelect');
+                const stopSelect = document.getElementById('stopSelect');
+                directionSelect.innerHTML = '<option value="">Error loading directions</option>';
+                stopSelect.innerHTML = '<option value="">Error loading stops</option>';
+            }
+        }
+
+        // Reset modal select elements to initial state
+        function resetModalSelects() {
+            const directionSelect = document.getElementById('directionSelect');
+            const stopSelect = document.getElementById('stopSelect');
+            directionSelect.innerHTML = '<option value="">Select Direction</option>';
+            stopSelect.innerHTML = '<option value="">First select a route and direction</option>';
+            stopsData = [];
+            routeBusData = null;
+        }
+        async function fetchRouteBusData(route) {
+            try {
+                const septaBusUrl = `https://www3.septa.org/api/TransitView/index.php?route=${route}`;
+                const cacheBuster = Date.now();
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaBusUrl)}&_cb=${cacheBuster}`;
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy request failed: ${response.status}`);
+                }
+                
+                const proxyData = await response.json();
+                const data = JSON.parse(proxyData.contents);
+                
+                if (!data.bus || !Array.isArray(data.bus)) {
+                    return [];
+                }
+                
+                return data.bus.filter(bus => 
+                    bus.route_id === route &&
+                    bus.VehicleID !== 'None' && 
+                    bus.VehicleID !== '0' &&
+                    bus.late !== 999 &&
+                    bus.late !== 998
+                );
+            } catch (error) {
+                console.error('Failed to fetch route bus data:', error);
+                return [];
+            }
+        }
+        async function fetchStopsData(route) {
+            // Try live SEPTA API via CORS proxy
+            const septaStopsUrl = `https://www3.septa.org/api/Stops/index.php?req1=${route}`;
+            const cacheBuster = Date.now();
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaStopsUrl)}&_cb=${cacheBuster}`;
+            const stopsResponse = await fetch(proxyUrl);
+            
+            if (!stopsResponse.ok) {
+                throw new Error(`Proxy request failed: ${stopsResponse.status}`);
+            }
+            
+            const proxyData = await stopsResponse.json();
+            const septaData = JSON.parse(proxyData.contents);
+            
+            // SEPTA stops API returns an array directly
+            if (!Array.isArray(septaData) || septaData.length === 0) {
+                throw new Error('No stops data available from SEPTA API');
+            }
+            
+            console.log('Loaded stops from live SEPTA API');
+            return septaData;
+        }
+
+        // Load stops data and start tracking
+        async function loadStopsAndStart() {
+            try {
+                showLoading('Loading stops...');
+                
+                // Remove no-route class
+                document.getElementById('mainContent').classList.remove('no-route');
+                
+                // Load stops data using the reusable function
+                stopsData = await fetchStopsData(currentRoute);
+                
+                // Load detours data
+                detoursData = await fetchDetoursData(currentRoute);
+                
+                updateRouteInfo();
+                updateDetoursWarning();
+                startTracking();
+            } catch (error) {
+                showError('Failed to load stops data: ' + error.message);
+            }
+        }
+
+        // Apply settings from modal
+        async function applySettings() {
+            const route = document.getElementById('routeInput').value.trim();
+            const direction = document.getElementById('directionSelect').value;
+            const stop = document.getElementById('stopSelect').value;
+
+            if (!route || !direction || !stop) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            currentRoute = route;
+            currentDirection = direction;
+            currentStop = stop;
+
+            // Save to history
+            saveRouteToHistory();
+
+            // Update URL
+            const url = new URL(window.location);
+            url.searchParams.set('route', route);
+            url.searchParams.set('direction', direction);
+            url.searchParams.set('stop', stop);
+            window.history.pushState({}, '', url);
+
+            hideSetup();
+            loadStopsAndStart();
+        }
+
+        // Load stops for route selection
+        document.getElementById('routeInput').addEventListener('input', async function() {
+            const route = this.value.trim();
+            await loadRouteDataForModal(route);
+        });
+
+        // Populate direction selection based on actual bus data
+        function populateDirectionSelect(buses) {
+            const directionSelect = document.getElementById('directionSelect');
+            const directions = new Set();
+            
+            // Extract unique directions from bus data
+            buses.forEach(bus => {
+                if (bus.Direction) {
+                    directions.add(bus.Direction);
+                }
+            });
+            
+            // Clear and populate direction select
+            directionSelect.innerHTML = '<option value="">Select Direction</option>';
+            
+            Array.from(directions).sort().forEach(direction => {
+                const option = document.createElement('option');
+                option.value = direction;
+                option.textContent = direction;
+                directionSelect.appendChild(option);
+            });
+            
+            // If only one direction available, auto-select it
+            if (directions.size === 1) {
+                directionSelect.value = Array.from(directions)[0];
+                directionSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Populate stop selection dropdown
+        function populateStopSelect(stops) {
+            const stopSelect = document.getElementById('stopSelect');
+            const direction = document.getElementById('directionSelect').value;
+            
+            stopSelect.innerHTML = '<option value="">Select your stop</option>';
+            
+            if (direction && stops.length > 0) {
+                stops.forEach(stop => {
+                    const option = document.createElement('option');
+                    option.value = stop.stopid;
+                    option.textContent = stop.stopname;
+                    stopSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Direction change handler
+        document.getElementById('directionSelect').addEventListener('change', function() {
+            const direction = this.value;
+            if (direction && stopsData && stopsData.length > 0) {
+                populateStopSelect(stopsData);
+            } else {
+                // Clear stops if no direction selected
+                const stopSelect = document.getElementById('stopSelect');
+                stopSelect.innerHTML = '<option value="">Select a direction first</option>';
+            }
+        });
+
+        // Update route information display
+        function updateRouteInfo() {
+            const routeInfo = document.getElementById('routeInfo');
+            const routeTitle = document.getElementById('routeTitle');
+            const routeDetails = document.getElementById('routeDetails');
+            
+            const stopInfo = stopsData.find(stop => stop.stopid === currentStop);
+            const stopName = stopInfo ? stopInfo.stopname : currentStop;
+            
+            routeTitle.textContent = `Route ${currentRoute} ${currentDirection}`;
+            routeDetails.textContent = `${stopName}`;
+            routeInfo.style.display = 'block';
+        }
+
+        // Start tracking buses
+        function startTracking() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            fetchBusData();
+            refreshInterval = setInterval(fetchBusData, 30000);
+            
+            // Start refresh countdown
+            startRefreshCountdown();
+            
+            // Show refresh info
+            document.getElementById('refreshInfo').style.display = 'block';
+        }
+
+        // Manual refresh function
+        function manualRefresh() {
+            const refreshButton = document.getElementById('refreshButton');
+            refreshButton.disabled = true;
+            
+            fetchBusData().then(() => {
+                // Reset the countdown after manual refresh
+                startRefreshCountdown();
+                refreshButton.disabled = false;
+            }).catch(() => {
+                refreshButton.disabled = false;
+            });
+        }
+
+        // Start/restart the refresh countdown
+        function startRefreshCountdown() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            nextRefreshTime = Date.now() + 30000; // 30 seconds from now
+            updateRefreshButton();
+            
+            countdownInterval = setInterval(updateRefreshButton, 1000);
+        }
+
+        // Update refresh button with countdown
+        function updateRefreshButton() {
+            const refreshButton = document.getElementById('refreshButton');
+            const refreshCountdown = document.getElementById('refreshCountdown');
+            const timeLeft = Math.max(0, Math.ceil((nextRefreshTime - Date.now()) / 1000));
+            
+            if (timeLeft > 0) {
+                refreshCountdown.textContent = `${timeLeft}s`;
+                refreshCountdown.style.display = 'block';
+            } else {
+                refreshCountdown.textContent = '';
+                refreshCountdown.style.display = 'none';
+            }
+        }
+
+        // Fetch bus data from SEPTA API
+        async function fetchBusData() {
+            try {
+                // Only show loading if we don't have existing data
+                if (!busData || busData.length === 0) {
+                    showLoading('Getting bus times...');
+                }
+                
+                // Try live SEPTA API via CORS proxy
+                const septaBusUrl = `https://www3.septa.org/api/TransitView/index.php?route=${currentRoute}`;
+                const cacheBuster = Date.now();
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(septaBusUrl)}&_cb=${cacheBuster}`;
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy request failed: ${response.status}`);
+                }
+                
+                const proxyData = await response.json();
+                const data = JSON.parse(proxyData.contents);
+                
+                if (!data.bus || !Array.isArray(data.bus)) {
+                    throw new Error('No bus data available from SEPTA API');
+                }
+                
+                // Filter the bus data
+                const filteredBuses = data.bus.filter(bus => 
+                    bus.route_id === currentRoute &&
+                    bus.Direction === currentDirection && 
+                    bus.VehicleID !== 'None' && 
+                    bus.VehicleID !== '0' &&
+                    bus.late !== 999 &&
+                    bus.late !== 998
+                );
+                
+                // Only update if we got data successfully
+                busData = filteredBuses;
+                lastUpdateTime = Date.now();
+                
+                displayBuses(filteredBuses);
+                updateLastUpdateTime();
+                console.log('Successfully updated bus data from live SEPTA API');
+                
+                // Reset countdown after successful fetch
+                startRefreshCountdown();
+                
+            } catch (error) {
+                console.error('Failed to fetch bus data:', error.message);
+                
+                // If we have existing data, keep showing it but indicate there was an error
+                if (busData && busData.length > 0) {
+                    console.log('Keeping existing bus data due to API error');
+                    // Optionally show a subtle error indicator without disrupting the display
+                    updateLastUpdateTime('Error updating');
+                } else {
+                    // Only show error message if we have no data at all
+                    showError('Unable to load bus data. Please check your connection and try again.');
+                }
+            }
+        }
+
+        // Display buses in the list
+        function displayBuses(buses) {
+            const busContent = document.getElementById('busContent');
+            
+            if (buses.length === 0) {
+                busContent.innerHTML = '<div class="loading"><p>No buses currently running</p></div>';
+                return;
+            }
+
+            // Get the selected stop's coordinates
+            const selectedStop = stopsData.find(stop => stop.stopid === currentStop);
+            if (!selectedStop) {
+                busContent.innerHTML = '<div class="error">Selected stop not found</div>';
+                return;
+            }
+
+            const stopLat = parseFloat(selectedStop.lat);
+            const stopLng = parseFloat(selectedStop.lng);
+
+            // Filter and process buses
+            const approachingBuses = buses.filter(bus => {
+                const busLat = parseFloat(bus.lat);
+                const busLng = parseFloat(bus.lng);
+                return isBusApproachingStop(busLat, busLng, stopLat, stopLng, currentDirection);
+            }).map(bus => {
+                const distance = calculateDistance(parseFloat(bus.lat), parseFloat(bus.lng), stopLat, stopLng);
+                const arrivalTime = estimateArrivalTime(bus, distance);
+                const arrivalMinutes = parseArrivalTimeToMinutes(arrivalTime);
+                
+                return {
+                    ...bus,
+                    calculatedDistance: distance,
+                    calculatedArrivalTime: arrivalTime,
+                    calculatedArrivalMinutes: arrivalMinutes
+                };
+            });
+
+            if (approachingBuses.length === 0) {
+                busContent.innerHTML = '<div class="loading"><p>No buses approaching your stop right now</p></div>';
+                return;
+            }
+
+            // Sort by arrival time
+            approachingBuses.sort((a, b) => a.calculatedArrivalMinutes - b.calculatedArrivalMinutes);
+
+            let html = '';
+            approachingBuses.forEach((bus, index) => {
+                const occupancyClass = getOccupancyClass(bus.estimated_seat_availability);
+                const occupancyText = getOccupancyText(bus.estimated_seat_availability);
+                const arrivalClass = bus.late > 3 ? 'late' : '';
+                
+                html += `
+                    <div class="bus-item">
+                        <div class="bus-info">
+                            <div class="bus-number">Bus #${bus.VehicleID}</div>
+                            <div class="bus-details">
+                                <div class="destination-line">${bus.destination}</div>
+                                <div class="next-stop-line">Next: ${bus.next_stop_name || 'Unknown'}</div>
+                                <div class="occupancy ${occupancyClass}">${occupancyText}</div>
+                            </div>
+                        </div>
+                        <div class="arrival-container">
+                            <div class="arrival-time ${arrivalClass}">${bus.calculatedArrivalTime}</div>
+                            <div class="distance">${bus.calculatedDistance.toFixed(1)} mi</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            busContent.innerHTML = html;
+        }
+
+        // Update arrival times in real-time
+        function updateArrivalTimes() {
+            if (!busData || busData.length === 0) return;
+            
+            const selectedStop = stopsData.find(stop => stop.stopid === currentStop);
+            if (!selectedStop) return;
+            
+            const stopLat = parseFloat(selectedStop.lat);
+            const stopLng = parseFloat(selectedStop.lng);
+            
+            const busItems = document.querySelectorAll('.bus-item');
+            const currentBuses = Array.from(busItems).map(item => {
+                const busNumber = item.querySelector('.bus-number').textContent.replace('Bus #', '');
+                return busData.find(bus => bus.VehicleID === busNumber);
+            }).filter(bus => bus);
+            
+            // Update each bus's arrival time
+            currentBuses.forEach((bus, index) => {
+                if (busItems[index]) {
+                    const distance = calculateDistance(parseFloat(bus.lat), parseFloat(bus.lng), stopLat, stopLng);
+                    const newArrivalTime = estimateArrivalTime(bus, distance);
+                    const arrivalElement = busItems[index].querySelector('.arrival-time');
+                    
+                    if (arrivalElement.textContent !== newArrivalTime) {
+                        arrivalElement.textContent = newArrivalTime;
+                        
+                        // Update styling based on new time
+                        const minutes = parseArrivalTimeToMinutes(newArrivalTime);
+                        arrivalElement.className = 'arrival-time';
+                        if (bus.late > 3) {
+                            arrivalElement.classList.add('late');
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update last update time display
+        function updateLastUpdateTime(errorMessage = null) {
+            const lastUpdateElement = document.getElementById('lastUpdate');
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            if (errorMessage) {
+                lastUpdateElement.textContent = `${timeString} (${errorMessage})`;
+                lastUpdateElement.style.color = '#dc3545';
+            } else {
+                lastUpdateElement.textContent = timeString;
+                lastUpdateElement.style.color = '#999';
+            }
+        }
+
+        // Utility functions
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 3959;
+            const dLat = toRadians(lat2 - lat1);
+            const dLng = toRadians(lng2 - lng1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function toRadians(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        function isBusApproachingStop(busLat, busLng, stopLat, stopLng, direction) {
+            switch(direction) {
+                case 'Northbound': return busLat < stopLat;
+                case 'Southbound': return busLat > stopLat;
+                case 'Eastbound': return busLng < stopLng;
+                case 'Westbound': return busLng > stopLng;
+                default: return true;
+            }
+        }
+
+        function estimateArrivalTime(bus, distanceMiles) {
+            // Use consistent speed for all buses
+            const avgSpeed = 10; // mph - reasonable city bus speed
+            
+            // Base travel time
+            let travelTimeMinutes = (distanceMiles / avgSpeed) * 60;
+            
+            // Add minimal time for stops
+            const estimatedStops = Math.floor(distanceMiles / 0.25); // One stop every quarter mile
+            const stopTimeMinutes = estimatedStops * 0.25; // 15 seconds per stop
+            travelTimeMinutes += stopTimeMinutes;
+            
+            // Factor in schedule status
+            const scheduleAdjustment = parseInt(bus.late) || 0;
+            
+            // Factor in time since last update (buses are moving)
+            const timeSinceUpdate = (Date.now() - lastUpdateTime) / (1000 * 60);
+            travelTimeMinutes = Math.max(0, travelTimeMinutes - timeSinceUpdate);
+            
+            // // Apply schedule adjustment
+            // travelTimeMinutes += scheduleAdjustment;
+            
+            // Apply distance-based scale factors to encourage urgency for closer buses
+            let scaleFactor;
+            if (distanceMiles <= 0.5) {
+                scaleFactor = 0.75; // Very close - 25% less time shown
+            } else if (distanceMiles <= 1.0) {
+                scaleFactor = 0.825; // Close - 17.5% less time shown
+            } else if (distanceMiles <= 1.5) {
+                scaleFactor = 0.95; // Medium - 5% less time shown
+            } else {
+                scaleFactor = 1.0; // Far - actual time
+            }
+            
+            // Apply scale factor
+            travelTimeMinutes *= scaleFactor;
+            
+            // Ensure reasonable bounds: 1-45 minutes
+            const totalMinutes = Math.max(1, Math.min(45, Math.round(travelTimeMinutes)));
+            
+            return `${totalMinutes} min`;
+        }
+
+        function parseArrivalTimeToMinutes(arrivalTimeString) {
+            const match = arrivalTimeString.match(/(\d+) min/);
+            return match ? parseInt(match[1]) : 999;
+        }
+
+        function getOccupancyClass(occupancy) {
+            switch(occupancy) {
+                case 'EMPTY': return 'empty';
+                case 'FEW_SEATS_AVAILABLE': return 'few';
+                case 'MANY_SEATS_AVAILABLE': return 'many';  
+                case 'FULL': return 'full';
+                case 'STANDING_ROOM_ONLY': return 'standing';
+                case 'CRUSHED_STANDING_ROOM_ONLY': return 'crushed';
+                default: return 'few';
+            }
+        }
+
+        function getOccupancyText(occupancy) {
+            switch(occupancy) {
+                case 'EMPTY': return 'Plenty of seats';
+                case 'FEW_SEATS_AVAILABLE': return 'Few seats left';
+                case 'MANY_SEATS_AVAILABLE': return 'Seats available';
+                case 'FULL': return 'Standing room';
+                case 'STANDING_ROOM_ONLY': return 'Standing only';
+                case 'CRUSHED_STANDING_ROOM_ONLY': return 'Very crowded';
+                case 'NOT_AVAILABLE': return 'Unknown';
+                case 'TBD': return 'Unknown';
+                default: return 'Unknown';
+            }
+        }
+
+        function showLoading(message) {
+            document.getElementById('busContent').innerHTML = `<div class="loading"><p>${message}</p></div>`;
+        }
+
+        function showError(message) {
+            document.getElementById('busContent').innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const setupModal = document.getElementById('setupModal');
+            const detoursModal = document.getElementById('detoursModal');
+            const infoModal = document.getElementById('infoModal');
+            const historyModal = document.getElementById('historyModal');
+            
+            if (event.target === setupModal) {
+                hideSetup();
+            }
+            if (event.target === detoursModal) {
+                hideDetours();
+            }
+            if (event.target === infoModal) {
+                hideInfo();
+            }
+            if (event.target === historyModal) {
+                hideHistory();
+            }
+        }
+
+        // Initialize app when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
