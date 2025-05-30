@@ -3,8 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Next SEPTA Bus</title>
+    <title>SEPTA Bus Tracker - Real-Time Philadelphia Bus Arrivals | Live Transit Times</title>
+    <meta name="description" content="Track SEPTA buses in real-time. Get live arrival times, bus occupancy, and route detours for Philadelphia public transit. Fast, accurate bus tracking for all SEPTA routes.">
+    <meta name="keywords" content="SEPTA bus tracker, Philadelphia bus times, real-time transit, SEPTA arrivals, Philadelphia public transportation, bus schedule, SEPTA route tracker">
+    <meta name="author" content="SEPTA Bus Tracker">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="SEPTA Bus Tracker - Real-Time Philadelphia Bus Arrivals">
+    <meta property="og:description" content="Track SEPTA buses in real-time. Get live arrival times, bus occupancy, and route detours for Philadelphia public transit.">
+    <meta property="og:url" content="https://nextseptabus.com">
+    <meta property="og:site_name" content="SEPTA Bus Tracker">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="SEPTA Bus Tracker - Real-Time Philadelphia Bus Arrivals">
+    <meta name="twitter:description" content="Track SEPTA buses in real-time. Get live arrival times and route information for Philadelphia public transit.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://nextseptabus.com">
+
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚌</text></svg>">
+
+    <!-- Structured Data for Local Business/Service -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "SEPTA Bus Tracker",
+        "description": "Real-time SEPTA bus tracking application for Philadelphia public transportation",
+        "url": "https://nextseptabus.com",
+        "applicationCategory": "TransportationApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Real-time bus arrival times",
+            "Bus occupancy information", 
+            "Route detour alerts",
+            "Multiple route tracking",
+            "Mobile-friendly interface"
+        ],
+        "serviceArea": {
+            "@type": "Place",
+            "name": "Philadelphia, Pennsylvania"
+        }
+    }
+    </script>
+
     <style>
         * {
             margin: 0;
@@ -18,6 +70,27 @@
             min-height: 100vh;
             color: #333;
             padding: 20px;
+        }
+
+        /* SEO-focused header */
+        .app-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .app-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .app-header p {
+            font-size: 1rem;
+            opacity: 0.9;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 0 80px;
         }
 
         .container {
@@ -80,6 +153,7 @@
             display: flex;
             flex-direction: row;
             gap: 8px;
+            align-items: flex-start;
         }
 
         .action-button {
@@ -90,9 +164,11 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 0.85rem;
-            transition: all 0.3s ease;
+            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
             backdrop-filter: blur(10px);
             min-width: 42px;
+            max-width: 42px;
+            width: 42px;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -100,6 +176,11 @@
             justify-content: center;
             position: relative;
             height: 48px;
+            min-height: 48px;
+            max-height: 48px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            margin: 0;
         }
 
         .action-button svg {
@@ -108,6 +189,7 @@
             stroke: currentColor;
             fill: none;
             stroke-width: 2;
+            flex-shrink: 0;
         }
 
         .action-button:hover {
@@ -121,12 +203,35 @@
             transform: none;
         }
 
+        /* Error state for refresh button - exact same dimensions */
+        .action-button.error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 6px 10px;
+            border-radius: 8px;
+            min-width: 42px;
+            max-width: 42px;
+            width: 42px;
+            height: 48px;
+            min-height: 48px;
+            max-height: 48px;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        .action-button.error:hover {
+            background: rgba(220, 53, 69, 0.2);
+            transform: translateY(-1px);
+        }
+
         .refresh-countdown {
             font-size: 0.65rem;
             line-height: 1.2;
             opacity: 0.8;
             white-space: nowrap;
             margin-top: 2px;
+            color: inherit;
         }
 
         .bus-list {
@@ -500,6 +605,14 @@
                 padding: 10px;
                 min-height: 100vh;
             }
+
+            .app-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .app-header p {
+                font-size: 0.9rem;
+            }
             
             .route-actions {
                 top: 10px;
@@ -527,7 +640,11 @@
 </head>
 <body>
     <div class="container">
-        <div class="main-content" id="mainContent">
+        <!-- SEO-focused header -->
+        <header class="app-header">
+            <h1>SEPTA Bus Tracker</h1>
+        </header>
+        <main class="main-content" id="mainContent">
             <div id="routeInfo" class="route-info" style="display: none;">
                 <h2 id="routeTitle">Route Information</h2>
                 <p id="routeDetails">Select a route to get started</p>
@@ -535,7 +652,7 @@
                     ⚠️ <span>Detours on route</span>
                 </div>
                 <div class="route-actions">
-                    <button class="action-button" id="refreshButton" onclick="manualRefresh()" title="Refresh">
+                    <button class="action-button" id="refreshButton" onclick="manualRefresh()" title="Refresh" aria-label="Refresh bus arrival times">
                         <svg viewBox="0 0 24 24">
                             <polyline points="23 4 23 10 17 10"></polyline>
                             <polyline points="1 20 1 14 7 14"></polyline>
@@ -543,7 +660,7 @@
                         </svg>
                         <div class="refresh-countdown" id="refreshCountdown"></div>
                     </button>
-                    <button class="action-button" onclick="showHistory()" title="Route History">
+                    <button class="action-button" onclick="showHistory()" title="Route History" aria-label="View recently tracked routes">
                         <svg viewBox="0 0 24 24">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14,2 14,8 20,8"></polyline>
@@ -552,7 +669,7 @@
                             <polyline points="10,9 9,9 8,9"></polyline>
                         </svg>
                     </button>
-                    <button class="action-button" onclick="showSetup()" title="Change Route">
+                    <button class="action-button" onclick="showSetup()" title="Change Route" aria-label="Select different SEPTA route">
                         <svg viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -566,9 +683,9 @@
             </div>
 
             <div class="refresh-info" id="refreshInfo" style="display: none;">
-                Updates every 30 seconds • Last updated: <span id="lastUpdate">Never</span> •<span class="more-info-link" onclick="showInfo()">More info</span>
+                Updates every 30s • Last updated: <span id="lastUpdate">Never</span> •<span class="more-info-link" onclick="showInfo()">More info</span>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Setup Modal -->
@@ -579,12 +696,12 @@
             
             <div class="form-group">
                 <label for="routeInput">Bus Route Number:</label>
-                <input type="text" id="routeInput" placeholder="e.g., 47">
+                <input type="text" id="routeInput" placeholder="e.g., 47, 42, 23" aria-describedby="route-help">
             </div>
 
             <div class="form-group">
                 <label for="directionSelect">Direction:</label>
-                <select id="directionSelect">
+                <select id="directionSelect" aria-describedby="direction-help">
                     <option value="">Select Direction</option>
                     <option value="Northbound">Northbound</option>
                     <option value="Southbound">Southbound</option>
@@ -595,7 +712,7 @@
 
             <div class="form-group">
                 <label for="stopSelect">Your Stop:</label>
-                <select id="stopSelect">
+                <select id="stopSelect" aria-describedby="stop-help">
                     <option value="">First select a route and direction</option>
                 </select>
             </div>
@@ -1262,11 +1379,24 @@
             const refreshButton = document.getElementById('refreshButton');
             refreshButton.disabled = true;
             
-            fetchBusData().then(() => {
-                // Reset the countdown after manual refresh
+            // Clear existing intervals to prevent conflicts
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            // Call fetchBusData with a flag to indicate this is a manual refresh
+            fetchBusData(true).then(() => {
+                // Restart both the data fetching interval and countdown
+                refreshInterval = setInterval(fetchBusData, 30000);
                 startRefreshCountdown();
                 refreshButton.disabled = false;
             }).catch(() => {
+                // Even on error, restart the intervals
+                refreshInterval = setInterval(fetchBusData, 30000);
+                startRefreshCountdown();
                 refreshButton.disabled = false;
             });
         }
@@ -1295,6 +1425,16 @@
             } else {
                 refreshCountdown.textContent = '';
                 refreshCountdown.style.display = 'none';
+            }
+        }
+
+        // Utility function to set refresh button error state
+        function setRefreshButtonError(isError) {
+            const refreshButton = document.getElementById('refreshButton');
+            if (isError) {
+                refreshButton.classList.add('error');
+            } else {
+                refreshButton.classList.remove('error');
             }
         }
 
@@ -1339,13 +1479,23 @@
                 
                 displayBuses(filteredBuses);
                 updateLastUpdateTime();
+                
+                // Clear error state since update was successful
+                setRefreshButtonError(false);
+                
                 console.log('Successfully updated bus data from live SEPTA API');
                 
-                // Reset countdown after successful fetch
-                startRefreshCountdown();
+                // Only reset countdown if this wasn't called from manualRefresh
+                // (manualRefresh handles its own countdown restart)
+                if (!arguments[0]) {
+                    startRefreshCountdown();
+                }
                 
             } catch (error) {
                 console.error('Failed to fetch bus data:', error.message);
+                
+                // Set refresh button to error state
+                setRefreshButtonError(true);
                 
                 // If we have existing data, keep showing it but indicate there was an error
                 if (busData && busData.length > 0) {
@@ -1355,6 +1505,11 @@
                 } else {
                     // Only show error message if we have no data at all
                     showError('Unable to load bus data. Please check your connection and try again.');
+                }
+                
+                // Only reset countdown if this wasn't called from manualRefresh
+                if (!arguments[0]) {
+                    startRefreshCountdown();
                 }
             }
         }
