@@ -531,7 +531,7 @@
                 <h2 id="routeTitle">Route Information</h2>
                 <p id="routeDetails">Select a route to get started</p>
                 <div id="detoursWarning" class="detours-warning" style="display: none;" onclick="showDetours()">
-                    ⚠️ <span>Detours!</span>
+                    ⚠️ <span>Detours on route</span>
                 </div>
                 <div class="route-actions">
                     <button class="action-button" id="refreshButton" onclick="manualRefresh()" title="Refresh">
@@ -874,6 +874,17 @@
             }
         }
 
+        // Helper function to convert full direction names to detour abbreviations
+        function getDetourDirectionCode(fullDirection) {
+            switch(fullDirection) {
+                case 'Northbound': return 'NB';
+                case 'Southbound': return 'SB';
+                case 'Eastbound': return 'EB';
+                case 'Westbound': return 'WB';
+                default: return null;
+            }
+        }
+
         // Display detours in modal
         function displayDetours() {
             const detoursContent = document.getElementById('detoursContent');
@@ -883,10 +894,19 @@
                 return;
             }
 
+            const currentDirectionCode = getDetourDirectionCode(currentDirection);
             let html = '';
+            let hasRelevantDetours = false;
+            
             detoursData.forEach(routeDetour => {
                 if (routeDetour.route_info && routeDetour.route_info.length > 0) {
-                    routeDetour.route_info.forEach(detour => {
+                    // Filter detours for current direction only
+                    const relevantDetours = routeDetour.route_info.filter(detour => 
+                        detour.route_direction === currentDirectionCode
+                    );
+                    
+                    relevantDetours.forEach(detour => {
+                        hasRelevantDetours = true;
                         html += `
                             <div class="detour-item">
                                 <div class="detour-header">
@@ -905,8 +925,8 @@
                 }
             });
 
-            if (html === '') {
-                detoursContent.innerHTML = '<div class="loading">No active detours found</div>';
+            if (!hasRelevantDetours) {
+                detoursContent.innerHTML = '<div class="loading">No detours found for your direction of travel</div>';
             } else {
                 detoursContent.innerHTML = html;
             }
@@ -917,12 +937,15 @@
             const detoursWarning = document.getElementById('detoursWarning');
             
             if (detoursData && detoursData.length > 0) {
-                // Check if there are any actual detours
-                const hasDetours = detoursData.some(routeDetour => 
-                    routeDetour.route_info && routeDetour.route_info.length > 0
+                // Check if there are any detours for the current direction
+                const currentDirectionCode = getDetourDirectionCode(currentDirection);
+                const hasRelevantDetours = detoursData.some(routeDetour => 
+                    routeDetour.route_info && routeDetour.route_info.some(detour =>
+                        detour.route_direction === currentDirectionCode
+                    )
                 );
                 
-                if (hasDetours) {
+                if (hasRelevantDetours) {
                     detoursWarning.style.display = 'flex';
                 } else {
                     detoursWarning.style.display = 'none';
