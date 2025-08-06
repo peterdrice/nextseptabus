@@ -5,7 +5,7 @@ let currentStop = null;
 let stopsData = [];
 let busData = null;
 let detoursData = null;
-let routeBusData = null;
+let routeBusData = null; // This will hold the bus data for the modal
 let refreshInterval = null;
 let countdownInterval = null;
 let lastUpdateTime = 0;
@@ -13,7 +13,6 @@ let nextRefreshTime = 0;
 
 // Initialize app
 function init() {
-    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const route = urlParams.get('route');
     const direction = urlParams.get('direction');
@@ -25,7 +24,6 @@ function init() {
         currentStop = stop;
         startBusTracking();
     } else {
-        // Show initial state
         document.getElementById('mainContent').classList.add('no-route');
     }
 }
@@ -49,7 +47,6 @@ function showSetup() {
     if (currentRoute) {
         loadRouteDataForModal(currentRoute);
     }
-
     routeInput.focus();
 }
 
@@ -84,7 +81,6 @@ async function loadRouteDataForModal(route) {
         directionSelect.disabled = false;
         
         stopSelect.innerHTML = '<option value="">Select a direction</option>';
-
     } catch (error) {
         console.error('Failed to load route data for modal:', error);
         directionSelect.innerHTML = '<option value="">Error loading</option>';
@@ -127,6 +123,7 @@ function populateDirectionSelect(buses) {
 /**
  * Populates the stop selection dropdown, sorting the stops based on
  * the selected direction of travel for a better user experience.
+ * Does not filter the list.
  */
 function populateStopSelect() {
     const stopSelect = document.getElementById('stopSelect');

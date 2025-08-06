@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SEPTA Bus Tracker - Real-Time Philadelphia Bus Arrivals | Live Transit Times</title>
+
     <link rel="stylesheet" href="style.css">
+
     <meta name="description" content="Track SEPTA buses in real-time. Get live arrival times, bus occupancy, and route detours for Philadelphia public transit. Fast, accurate bus tracking for all SEPTA routes.">
     <meta name="keywords" content="SEPTA bus tracker, Philadelphia bus times, real-time transit, SEPTA arrivals, Philadelphia public transportation, bus schedule, SEPTA route tracker">
     <meta name="author" content="SEPTA Bus Tracker">
@@ -114,14 +116,22 @@
 
             <div class="form-group">
                 <label for="directionSelect">Direction:</label>
-                <select id="directionSelect" aria-describedby="direction-help">
+                <select id="directionSelect" aria-describedby="direction-help" disabled>
                     <option value="">Select Direction</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="stopSelect">Your Stop:</label>
-                <select id="stopSelect" aria-describedby="stop-help">
+                <label for="stopSelect">
+                    Your Stop:
+                    <span class="tooltip-container">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">
+                            Stops are sorted by direction, but not all may apply to your trip. Please select the stop that is correct for your direction of travel.
+                        </span>
+                    </span>
+                </label>
+                <select id="stopSelect" aria-describedby="stop-help" disabled>
                     <option value="">First select a route and direction</option>
                 </select>
             </div>
