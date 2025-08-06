@@ -2,7 +2,7 @@
 let currentRoute = null;
 let currentDirection = null;
 let currentStop = null;
-let stopsData = []; // This is the global variable we need to update
+let stopsData = [];
 let busData = null;
 let detoursData = null;
 let routeBusData = null;
@@ -30,27 +30,22 @@ function init() {
     }
 }
 
-// --- MODAL AND DATA FETCHING LOGIC (WITH FIXES) ---
+// --- MODAL AND DATA FETCHING LOGIC ---
 
-// Setup modal functions
 function showSetup() {
     const modal = document.getElementById('setupModal');
     modal.style.display = 'block';
 
-    // Initialize modal with current values if they exist
     const routeInput = document.getElementById('routeInput');
     const directionSelect = document.getElementById('directionSelect');
     const stopSelect = document.getElementById('stopSelect');
 
     routeInput.value = currentRoute || '';
-
-    // Reset and disable dropdowns initially
     directionSelect.innerHTML = '<option value="">Select Direction</option>';
     stopSelect.innerHTML = '<option value="">First select a route</option>';
     directionSelect.disabled = true;
     stopSelect.disabled = true;
 
-    // If there's a current route, load its data for the modal
     if (currentRoute) {
         loadRouteDataForModal(currentRoute);
     }
@@ -62,7 +57,6 @@ function hideSetup() {
     document.getElementById('setupModal').style.display = 'none';
 }
 
-// Load route data for modal (directions and stops)
 async function loadRouteDataForModal(route) {
     if (!route || route.trim() === '') {
         resetModalSelects();
@@ -73,27 +67,22 @@ async function loadRouteDataForModal(route) {
     const stopSelect = document.getElementById('stopSelect');
 
     try {
-        // Disable dropdowns and show loading state
         directionSelect.innerHTML = '<option value="">Loading directions...</option>';
         stopSelect.innerHTML = '<option value="">Loading stops...</option>';
         directionSelect.disabled = true;
         stopSelect.disabled = true;
 
-        // Fetch both stops and bus data
         const [stops, buses] = await Promise.all([
             fetchStopsData(route),
             fetchRouteBusData(route)
         ]);
 
-        // **THE FIX:** Assign fetched data to the GLOBAL variables
         stopsData = stops;
         routeBusData = buses;
 
-        // Populate directions and enable the select
         populateDirectionSelect(buses);
         directionSelect.disabled = false;
         
-        // Reset stop select until a direction is chosen
         stopSelect.innerHTML = '<option value="">Select a direction</option>';
 
     } catch (error) {
@@ -103,23 +92,19 @@ async function loadRouteDataForModal(route) {
     }
 }
 
-// Direction change handler - This now works correctly
 document.getElementById('directionSelect').addEventListener('change', function() {
     const direction = this.value;
     const stopSelect = document.getElementById('stopSelect');
 
     if (direction && stopsData && stopsData.length > 0) {
-        populateStopSelect(); // Call the function to fill the stops
-        stopSelect.disabled = false; // Enable the stop dropdown
+        populateStopSelect();
+        stopSelect.disabled = false;
     } else {
-        // Clear stops if no direction selected
         stopSelect.innerHTML = '<option value="">Select a direction first</option>';
         stopSelect.disabled = true;
     }
 });
 
-
-// Populate direction selection based on actual bus data
 function populateDirectionSelect(buses) {
     const directionSelect = document.getElementById('directionSelect');
     const directions = new Set(buses.map(bus => bus.Direction).filter(Boolean));
@@ -139,14 +124,32 @@ function populateDirectionSelect(buses) {
     }
 }
 
-// Populate stop selection dropdown using the GLOBAL stopsData
+/**
+ * Populates the stop selection dropdown, sorting the stops based on
+ * the selected direction of travel for a better user experience.
+ */
 function populateStopSelect() {
     const stopSelect = document.getElementById('stopSelect');
+    const direction = document.getElementById('directionSelect').value;
     stopSelect.innerHTML = '<option value="">Select your stop</option>';
-    
-    // It reads from the global stopsData which is now correctly populated
-    if (stopsData && stopsData.length > 0) {
-        stopsData.forEach(stop => {
+
+    if (stopsData && stopsData.length > 0 && direction) {
+        // Create a copy to avoid modifying the original global array
+        const sortedStops = [...stopsData];
+
+        // Sort based on the direction of travel
+        if (direction === 'Northbound') {
+            sortedStops.sort((a, b) => parseFloat(a.lat) - parseFloat(b.lat));
+        } else if (direction === 'Southbound') {
+            sortedStops.sort((a, b) => parseFloat(b.lat) - parseFloat(a.lat));
+        } else if (direction === 'Eastbound') {
+            sortedStops.sort((a, b) => parseFloat(a.lng) - parseFloat(b.lng));
+        } else if (direction === 'Westbound') {
+            sortedStops.sort((a, b) => parseFloat(b.lng) - parseFloat(a.lng));
+        }
+
+        // Populate the dropdown with the sorted list
+        sortedStops.forEach(stop => {
             const option = document.createElement('option');
             option.value = stop.stopid;
             option.textContent = stop.stopname;
@@ -158,7 +161,6 @@ function populateStopSelect() {
 
 // --- REST OF THE SCRIPT (UNCHANGED) ---
 
-// Route history functions
 function showHistory() {
     document.getElementById('historyModal').style.display = 'block';
     displayRouteHistory();
