@@ -5,7 +5,7 @@ let currentStop = null;
 let stopsData = [];
 let busData = null;
 let detoursData = null;
-let routeBusData = null; // This will hold the bus data for the modal
+let routeBusData = null;
 let refreshInterval = null;
 let countdownInterval = null;
 let lastUpdateTime = 0;
@@ -27,6 +27,39 @@ function init() {
         document.getElementById('mainContent').classList.add('no-route');
     }
 }
+
+// --- PAGE VISIBILITY API IMPLEMENTATION ---
+
+// This function stops the data refresh timers.
+function stopTracking() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    console.log("Tracking stopped due to page visibility change.");
+}
+
+// This function is called when the user navigates away from or back to the tab.
+function handleVisibilityChange() {
+    // If the page is hidden, stop the timers
+    if (document.hidden) {
+        stopTracking();
+    } else {
+        // If the page is visible and we have a route selected, restart tracking
+        if (currentRoute) {
+            console.log("Tracking restarted due to page visibility change.");
+            startTracking();
+        }
+    }
+}
+
+// Listen for the browser's visibilitychange event
+document.addEventListener("visibilitychange", handleVisibilityChange);
+
 
 // --- MODAL AND DATA FETCHING LOGIC ---
 
@@ -120,21 +153,14 @@ function populateDirectionSelect(buses) {
     }
 }
 
-/**
- * Populates the stop selection dropdown, sorting the stops based on
- * the selected direction of travel for a better user experience.
- * Does not filter the list.
- */
 function populateStopSelect() {
     const stopSelect = document.getElementById('stopSelect');
     const direction = document.getElementById('directionSelect').value;
     stopSelect.innerHTML = '<option value="">Select your stop</option>';
 
     if (stopsData && stopsData.length > 0 && direction) {
-        // Create a copy to avoid modifying the original global array
         const sortedStops = [...stopsData];
 
-        // Sort based on the direction of travel
         if (direction === 'Northbound') {
             sortedStops.sort((a, b) => parseFloat(a.lat) - parseFloat(b.lat));
         } else if (direction === 'Southbound') {
@@ -145,7 +171,6 @@ function populateStopSelect() {
             sortedStops.sort((a, b) => parseFloat(b.lng) - parseFloat(a.lng));
         }
 
-        // Populate the dropdown with the sorted list
         sortedStops.forEach(stop => {
             const option = document.createElement('option');
             option.value = stop.stopid;
